@@ -1,0 +1,166 @@
+.
+|   .gitignore
+|   customer
+|-- |   .env.dev
+|-- |   Dockerfile
+|-- |   package-lock.json
+|-- |   package.json
+|-- |   src
+|-- |-- |   api
+|-- |-- |-- |   app-events.js
+|-- |-- |-- |   customer.js
+|-- |-- |-- |   index.js
+|-- |-- |-- |   middlewares
+|-- |-- |-- |-- |   auth.js
+|-- |-- |   config
+|-- |-- |-- |   index.js
+|-- |-- |   database
+|-- |-- |-- |   connection.js
+|-- |-- |-- |   index.js
+|-- |-- |-- |   models
+|-- |-- |-- |-- |   Address.js
+|-- |-- |-- |-- |   Customer.js
+|-- |-- |-- |-- |   index.js
+|-- |-- |-- |   repository
+|-- |-- |-- |-- |   customer-repository.js
+|-- |-- |   express-app.js
+|-- |-- |   index.js
+|-- |-- |   sampledata.json
+|-- |-- |   services
+|-- |-- |-- |   customer-service.js
+|-- |-- |-- |   customer-service.test.js
+|-- |-- |   utils
+|-- |-- |-- |   app-errors.js
+|-- |-- |-- |   error-handler.js
+|-- |-- |-- |   index.js
+|   docker-compose.yml
+|   file_structure.txt
+|   products
+|-- |   .env.dev
+|-- |   Dockerfile
+|-- |   index.js
+|-- |   package-lock.json
+|-- |   package.json
+|-- |   src
+|-- |-- |   api
+|-- |-- |-- |   app-events.js
+|-- |-- |-- |   index.js
+|-- |-- |-- |   middlewares
+|-- |-- |-- |-- |   auth.js
+|-- |-- |-- |   products.js
+|-- |-- |   config
+|-- |-- |-- |   index.js
+|-- |-- |   database
+|-- |-- |-- |   connection.js
+|-- |-- |-- |   index.js
+|-- |-- |-- |   models
+|-- |-- |-- |-- |   index.js
+|-- |-- |-- |-- |   Product.js
+|-- |-- |-- |   repository
+|-- |-- |-- |-- |   product-repository.js
+|-- |-- |   express-app.js
+|-- |-- |   index.js
+|-- |-- |   sampledata.json
+|-- |-- |   services
+|-- |-- |-- |   product-service.js
+|-- |-- |-- |   product-service.test.js
+|-- |-- |   utils
+|-- |-- |-- |   app-errors.js
+|-- |-- |-- |   error-handler.js
+|-- |-- |-- |   index.js
+|   proxy
+|-- |   Dockerfile
+|-- |   nginx.conf
+|   README.md
+|   shopping
+|-- |   .env.dev
+|-- |   Dockerfile
+|-- |   index.js
+|-- |   package-lock.json
+|-- |   package.json
+|-- |   src
+|-- |-- |   api
+|-- |-- |-- |   app-events.js
+|-- |-- |-- |   index.js
+|-- |-- |-- |   middlewares
+|-- |-- |-- |-- |   auth.js
+|-- |-- |-- |   shopping.js
+|-- |-- |   config
+|-- |-- |-- |   index.js
+|-- |-- |   database
+|-- |-- |-- |   connection.js
+|-- |-- |-- |   index.js
+|-- |-- |-- |   models
+|-- |-- |-- |-- |   Cart.js
+|-- |-- |-- |-- |   index.js
+|-- |-- |-- |-- |   Order.js
+|-- |-- |-- |   repository
+|-- |-- |-- |-- |   shopping-repository.js
+|-- |-- |   express-app.js
+|-- |-- |   index.js
+|-- |-- |   sampledata.json
+|-- |-- |   services
+|-- |-- |-- |   shopping-service.js
+|-- |-- |-- |   shopping-service.test.js
+|-- |-- |   utils
+|-- |-- |-- |   app-errors.js
+|-- |-- |-- |   error-handler.js
+|-- |-- |-- |   index.js
+|   terraform-ecs-project
+|-- |   .terraform
+|-- |-- |   modules
+|-- |-- |-- |   modules.json
+|-- |-- |   providers
+|-- |-- |-- |   registry.terraform.io
+|-- |-- |-- |-- |   hashicorp
+|-- |-- |-- |-- |-- |   aws
+|-- |-- |-- |-- |-- |-- |   6.31.0
+|-- |-- |-- |-- |-- |-- |-- |   windows_amd64
+|-- |-- |-- |-- |-- |-- |-- |-- |   LICENSE.txt
+|-- |-- |-- |-- |-- |-- |-- |-- |   terraform-provider-aws_v6.31.0_x5.exe
+|-- |-- |   terraform.tfstate
+|-- |   .terraform.lock.hcl
+|-- |   backend.tf
+|-- |   bootstrap
+|-- |-- |   .terraform
+|-- |-- |-- |   providers
+|-- |-- |-- |-- |   registry.terraform.io
+|-- |-- |-- |-- |-- |   hashicorp
+|-- |-- |-- |-- |-- |-- |   aws
+|-- |-- |-- |-- |-- |-- |-- |   6.31.0
+|-- |-- |-- |-- |-- |-- |-- |-- |   windows_amd64
+|-- |-- |-- |-- |-- |-- |-- |-- |-- |   LICENSE.txt
+|-- |-- |-- |-- |-- |-- |-- |-- |-- |   terraform-provider-aws_v6.31.0_x5.exe
+|-- |-- |   .terraform.lock.hcl
+|-- |-- |   main.tf
+|-- |-- |   terraform.tfstate
+|-- |-- |   terraform.tfstate.backup
+|-- |   main.tf
+|-- |   modules
+|-- |-- |   alb
+|-- |-- |-- |   main.tf
+|-- |-- |-- |   variables.tf
+|-- |-- |   database
+|-- |-- |-- |   main.tf
+|-- |-- |   ecr
+|-- |-- |-- |   main.tf
+|-- |-- |   ecs
+|-- |-- |-- |   main.tf
+|-- |-- |-- |   variables.tf
+|-- |-- |   messaging
+|-- |-- |-- |   main.tf
+|-- |-- |   vpc
+|-- |-- |-- |   main.tf
+|   terraform.tfstate
+|   __Episodes
+|-- |   Part_5
+|-- |-- |   nodejs_microservice_rpc_communication-master.zip
+|-- |   Part_6
+|-- |-- |   CD_Prod_Workflow.yml
+|-- |-- |   CD_QA_Workflow.yml
+|-- |-- |   CI_Workflow.yml
+|-- |-- |   part_6_nodejs_microservice.zip
+|-- |   Part_7
+|-- |-- |   Part_7.zip
+|-- |   Part_8
+|-- |-- |   Part_8.zip

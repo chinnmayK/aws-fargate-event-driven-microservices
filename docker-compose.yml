@@ -1,0 +1,135 @@
+services:
+  # -------------------------------
+  # RabbitMQ – Message Broker
+  # Used for event-driven communication between services
+  # -------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"     # AMQP protocol (used by services)
+      - "15672:15672"   # RabbitMQ Management UI (browser access)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq   # Persist RabbitMQ data
+      - rabbitmq_logs:/var/log/rabbitmq   # Persist RabbitMQ logs
+    restart: always
+    healthcheck:
+      # Ensures RabbitMQ is fully running before dependent services start
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------
+  # MongoDB – NoSQL Database
+  # Single shared MongoDB instance
+  # -------------------------------
+  nosql-db:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"   # MongoDB default port
+    volumes:
+      - mongodb_data:/data/db   # Persist MongoDB data
+    restart: always
+    healthcheck:
+      # Uses mongosh to verify MongoDB is responding
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------
+  # Customer Service
+  # Handles customer-related logic and data
+  # -------------------------------
+  customer:
+    build: ./customer
+    container_name: customer-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - MONGODB_URI=mongodb://nosql-db/msytt_customer
+      - MSG_QUEUE_URL=amqp://rabbitmq:5672
+      - EXCHANGE_NAME=ONLINE_STORE
+      - APP_SECRET=jg_youtube_tutorial
+    restart: always
+    depends_on:
+      # Wait until RabbitMQ and MongoDB are healthy
+      rabbitmq:
+        condition: service_healthy
+      nosql-db:
+        condition: service_healthy
+
+  # -------------------------------
+  # Products Service
+  # Manages product catalog and inventory
+  # -------------------------------
+  products:
+    build: ./products
+    container_name: products-service
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - MONGODB_URI=mongodb://nosql-db/msytt_product
+      - MSG_QUEUE_URL=amqp://rabbitmq:5672
+      - EXCHANGE_NAME=ONLINE_STORE
+      - APP_SECRET=jg_youtube_tutorial
+    restart: always
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      nosql-db:
+        condition: service_healthy
+
+  # -------------------------------
+  # Shopping Service
+  # Handles cart, orders, and shopping workflows
+  # -------------------------------
+  shopping:
+    build: ./shopping
+    container_name: shopping-service
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - MONGODB_URI=mongodb://nosql-db/msytt_shopping
+      - MSG_QUEUE_URL=amqp://rabbitmq:5672
+      - EXCHANGE_NAME=ONLINE_STORE
+      - APP_SECRET=jg_youtube_tutorial
+    restart: always
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      nosql-db:
+        condition: service_healthy
+
+  # -------------------------------
+  # Nginx Reverse Proxy / API Gateway
+  # Entry point for all external traffic
+  # -------------------------------
+  proxy:
+    build: ./proxy
+    container_name: nginx-gateway
+    ports:
+      - "80:80"   # Public HTTP entry point
+    restart: always
+    depends_on:
+      # Ensures backend services are started before proxy
+      customer:
+        condition: service_started
+      products:
+        condition: service_started
+      shopping:
+        condition: service_started
+
+# -------------------------------
+# Named Volumes
+# Used for data persistence
+# -------------------------------
+volumes:
+  mongodb_data:
+  rabbitmq_data:
+  rabbitmq_logs:

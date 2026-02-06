@@ -1,0 +1,51 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Environment variables (Crucial for security)
+.env
+.env.test
+.env.production
+*.env
+
+# Local databases and data stores
+db/
+*.db
+*.sqlite
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE/Editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build/Dist folders
+dist/
+build/
+out/
+
+# Terraform specific files
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+
+# Debug and Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs
+*.log
+
+# Docker
+.dockerignore
