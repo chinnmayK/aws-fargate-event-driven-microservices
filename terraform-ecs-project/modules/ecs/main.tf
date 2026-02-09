@@ -111,7 +111,7 @@ resource "aws_security_group" "ecs_tasks" {
 # - Database connection strings
 # - Messaging broker credentials
 resource "aws_secretsmanager_secret" "app_secrets" {
-  name        = "microservices-secrets-v2"
+  name        = "microservices-secrets-v3"
   description = "Sensitive credentials for microservices"
 }
 

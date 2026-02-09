@@ -19,8 +19,5 @@ terraform {
 
     # DynamoDB table used for state locking and consistency
     dynamodb_table = "terraform-state-locking"
-
-    # AWS CLI profile Terraform will use for authentication
-    profile = "terraform-worker"
   }
 }

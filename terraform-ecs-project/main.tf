@@ -5,8 +5,9 @@
 # and deploys all resources in the ap-south-1 (Mumbai) region.
 provider "aws" {
   region  = "ap-south-1"
-  profile = "terraform-worker"
 }
+
+data "aws_caller_identity" "current" {}
 
 # ------------------------------------------------------------
 # VPC Module
@@ -98,4 +99,14 @@ module "ecs" {
   # Backend service endpoints injected into ECS tasks as environment variables
   docdb_endpoint    = module.database.endpoint
   rabbitmq_endpoint = module.messaging.endpoint
+}
+
+module "cicd" {
+  source     = "./modules/cicd"
+  account_id = data.aws_caller_identity.current.account_id
+}
+
+# Output the ARN to your terminal
+output "github_connection_arn" {
+  value = module.cicd.connection_arn
 }
