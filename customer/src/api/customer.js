@@ -57,6 +57,11 @@ module.exports = (app, channel) => {
         res.json(data);
     });
 
+    app.get('/about', async (req, res, next) => {
+        const data = await service.GetAbout();
+        return res.json(data.data);
+    });
+
     app.get('/shoping-details', UserAuth, async (req,res,next) => {
         const { _id } = req.user;
        const { data } = await service.GetShopingDetails(_id);

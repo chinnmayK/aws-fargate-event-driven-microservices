@@ -91,3 +91,116 @@ resource "aws_codebuild_project" "build" {
     buildspec = "${each.key}/buildspec.yml"
   }
 }
+
+# 6. IAM Role for CodePipeline
+resource "aws_iam_role" "pipeline_role" {
+  name = "ecom-pipeline-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "codepipeline.amazonaws.com" }
+    }]
+  })
+}
+
+# 7. Pipeline Policy
+resource "aws_iam_role_policy" "pipeline_policy" {
+  role = aws_iam_role.pipeline_role.name
+  name = "ecom-pipeline-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = ["s3:GetObject", "s3:GetObjectVersion", "s3:GetBucketVersioning", "s3:PutObjectAcl", "s3:PutObject"]
+        Resource = [aws_s3_bucket.pipeline_artifacts.arn, "${aws_s3_bucket.pipeline_artifacts.arn}/*"]
+      },
+      {
+        Effect = "Allow"
+        Action = ["codestar-connections:UseConnection"]
+        Resource = aws_codestarconnections_connection.github.arn
+      },
+      {
+        Effect = "Allow"
+        Action = ["codebuild:BatchGetBuilds", "codebuild:StartBuild"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = ["ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition", "ecs:UpdateService"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = ["iam:PassRole"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# 8. The Pipelines (One for each service)
+resource "aws_codepipeline" "service_pipeline" {
+  for_each = toset(["customer", "products", "shopping"])
+  name     = "${each.key}-pipeline"
+  role_arn = aws_iam_role.pipeline_role.arn
+
+  artifact_store {
+    location = aws_s3_bucket.pipeline_artifacts.bucket
+    type     = "S3"
+  }
+
+  stage {
+    name = "Source"
+    action {
+      name             = "Source"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "CodeStarSourceConnection"
+      version          = "1"
+      output_artifacts = ["source_output"]
+      configuration = {
+        ConnectionArn    = aws_codestarconnections_connection.github.arn
+        FullRepositoryId = "chinnmayK/aws-fargate-event-driven-microservices"
+        BranchName       = "main"
+      }
+    }
+  }
+
+  stage {
+    name = "Build"
+    action {
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      output_artifacts = ["build_output"]
+      version          = "1"
+      configuration = {
+        ProjectName = aws_codebuild_project.build[each.key].name
+      }
+    }
+  }
+
+  stage {
+    name = "Deploy"
+    action {
+      name            = "Deploy"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "ECS"
+      input_artifacts = ["build_output"]
+      version         = "1"
+      configuration = {
+        ClusterName = "microservices-cluster"
+        ServiceName = "${each.key}-service"
+        FileName    = "imagedefinitions.json"
+      }
+    }
+  }
+}

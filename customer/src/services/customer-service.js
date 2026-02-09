@@ -15,6 +15,16 @@ class CustomerService {
         this.repository = new CustomerRepository();
     }
 
+    async GetAbout() {
+        return FormateData({
+            status: "Live",
+            message: "This update was deployed automatically via AWS CodePipeline!",
+            environment: "AWS Fargate",
+            timestamp: new Date().toISOString(),
+            version: "2.0.0"
+        });
+    }
+
     // Customer Sign In
     async SignIn(userInputs){
 
