@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM node:16-alpine AS builder
+FROM public.ecr.aws/docker/library/node:16-alpine AS builder
 
 WORKDIR /app
 
