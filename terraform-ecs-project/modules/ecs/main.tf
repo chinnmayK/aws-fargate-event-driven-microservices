@@ -240,12 +240,20 @@ resource "aws_ecs_service" "main" {
     assign_public_ip = true
   }
 
-  load_balancer {
+load_balancer {
     target_group_arn = var.target_group_arns[each.key]
     container_name   = each.key
     container_port   = each.key == "customer" ? 8001 : (
       each.key == "products" ? 8002 : 8003
     )
+  }
+
+  # Add this to prevent Terraform from fighting with CodeDeploy
+  lifecycle {
+    ignore_changes = [
+      task_definition,
+      load_balancer
+    ]
   }
 }
 

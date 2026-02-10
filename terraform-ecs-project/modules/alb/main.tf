@@ -64,7 +64,7 @@ resource "aws_lb_target_group" "tg" {
 
   # Health check configuration for service containers
   health_check {
-    path                = "/health" # Common health endpoint across services
+    path                = "/${each.key}/health" # Common health endpoint across services
     port                = "traffic-port"
     protocol            = "HTTP"
     interval            = 30
@@ -83,7 +83,7 @@ resource "aws_lb_target_group" "customer_green" {
 
   # Health check configuration for service containers
   health_check {
-    path                = "/health" # Common health endpoint across services
+    path                = "/customer/health" # Common health endpoint across services
     port                = "traffic-port"
     protocol            = "HTTP"
     interval            = 30
@@ -119,7 +119,7 @@ resource "aws_lb_listener" "http" {
 # 5. Listener Rules (Path-Based Routing)
 # ------------------------------------------------------------
 # Routes traffic to target groups based on URL path.
-# This replaces traditional reverse-proxy logic (e.g., Nginx).
+# Lifecycle ignore_changes is REQUIRED for Blue-Green deployments.
 resource "aws_lb_listener_rule" "rules" {
   for_each     = aws_lb_target_group.tg
   listener_arn = aws_lb_listener.http.arn
@@ -131,31 +131,18 @@ resource "aws_lb_listener_rule" "rules" {
 
   condition {
     path_pattern {
-      values = ["/${each.key}*"]
+      # This pattern covers both /service and /service/any-path
+      values = ["/${each.key}", "/${each.key}/*"]
     }
   }
-}
 
-# ------------------------------------------------------------
-# 6. Service-Specific Listener Rules
-# ------------------------------------------------------------
-# Explicit routing rules per service to handle:
-# - /service
-# - /service/*
-# Useful for testing and cleaner URL matching.
-resource "aws_lb_listener_rule" "service_rule" {
-  for_each     = var.services
-  listener_arn = aws_lb_listener.http.arn
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.tg[each.key].arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/${each.key}/*", "/${each.key}"]
-    }
+  # CRITICAL for Blue-Green:
+  # This prevents Terraform from reverting the target_group_arn 
+  # back to "Blue" while CodeDeploy has it set to "Green".
+  lifecycle {
+    ignore_changes = [
+      action
+    ]
   }
 }
 

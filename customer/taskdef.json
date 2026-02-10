@@ -12,12 +12,30 @@
                     "protocol": "tcp"
                 }
             ],
+            "environment": [
+                { "name": "PORT", "value": "8001" },
+                { "name": "EXCHANGE_NAME", "value": "ONLINE_SHOPPING" }
+            ],
+            "secrets": [
+                {
+                    "name": "MONGODB_URI",
+                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v4:customer_mongodb_uri::"
+                },
+                {
+                    "name": "MSG_QUEUE_URL",
+                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v4:rabbitmq_uri::"
+                },
+                {
+                    "name": "APP_SECRET",
+                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v4:app_secret::"
+                }
+            ],
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
                     "awslogs-group": "/ecs/microservices",
                     "awslogs-region": "ap-south-1",
-                    "awslogs-stream-prefix": "ecs"
+                    "awslogs-stream-prefix": "customer"
                 }
             }
         }

@@ -5,19 +5,25 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+      # Define IMAGE_TAG so it's not empty
+      - IMAGE_TAG=$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
   build:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      # We build the image using the current directory as context
-      - docker build -t $REPOSITORY_URI:latest ./customer
+      # Build and tag with the unique IMAGE_TAG
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG ./customer
   post_build:
     commands:
       - echo Build completed on `date`
-      - echo Building imagedefinitions.json...
-      - printf '[{"name":"customer","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - echo Pushing the Docker image...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
       - echo Updating placeholders in taskdef.json and appspec.yaml...
-      - sed -i "s|<IMAGE1_NAME>|$REPOSITORY_URI:$IMAGE_TAG|g" customer/taskdef.json
+      - # This creates the full URI: 12345.dkr.ecr.region.amazonaws.com/customer:tag
+      - FULL_IMAGE_URI="$REPOSITORY_URI:$IMAGE_TAG"
+      - sed -i "s|<IMAGE1_NAME>|$FULL_IMAGE_URI|g" customer/taskdef.json
+      - # Create imagedefinitions.json for compatibility
+      - printf '[{"name":"customer","imageUri":"%s"}]' $FULL_IMAGE_URI > imagedefinitions.json
       - cp customer/appspec.yaml .
       - cp customer/taskdef.json .
 

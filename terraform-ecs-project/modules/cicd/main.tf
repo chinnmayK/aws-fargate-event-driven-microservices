@@ -116,8 +116,17 @@ resource "aws_iam_role_policy" "pipeline_policy" {
     Statement = [
       {
         Effect = "Allow"
-        Action = ["s3:GetObject", "s3:GetObjectVersion", "s3:GetBucketVersioning", "s3:PutObjectAcl", "s3:PutObject"]
-        Resource = [aws_s3_bucket.pipeline_artifacts.arn, "${aws_s3_bucket.pipeline_artifacts.arn}/*"]
+        Action = [
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:GetBucketVersioning",
+          "s3:PutObjectAcl",
+          "s3:PutObject"
+        ]
+        Resource = [
+          aws_s3_bucket.pipeline_artifacts.arn,
+          "${aws_s3_bucket.pipeline_artifacts.arn}/*"
+        ]
       },
       {
         Effect = "Allow"
@@ -131,13 +140,39 @@ resource "aws_iam_role_policy" "pipeline_policy" {
       },
       {
         Effect = "Allow"
-        Action = ["ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition", "ecs:UpdateService"]
+        Action = [
+          "ecs:DescribeServices",
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition",
+          "ecs:UpdateService"
+        ]
         Resource = "*"
       },
       {
         Effect = "Allow"
         Action = ["iam:PassRole"]
         Resource = "*"
+      },
+
+      # ✅ CodeDeploy permissions
+      {
+        Effect = "Allow"
+        Action = [
+          "codedeploy:CreateDeployment",
+          "codedeploy:GetDeployment",
+          "codedeploy:GetDeploymentConfig",
+          "codedeploy:GetApplication",
+          "codedeploy:GetApplicationRevision",
+          "codedeploy:RegisterApplicationRevision"
+        ]
+        Resource = "*"
+      },
+
+      # ✅ REQUIRED: Allow CodePipeline to pass the CodeDeploy role
+      {
+        Effect = "Allow"
+        Action = "iam:PassRole"
+        Resource = "arn:aws:iam::202533520289:role/ecom-codedeploy-role"
       }
     ]
   })
@@ -220,6 +255,7 @@ resource "aws_codedeploy_deployment_group" "customer" {
 
 resource "aws_codepipeline" "service_pipeline" {
   for_each = toset(["customer", "products", "shopping"])
+
   name     = "${each.key}-pipeline"
   role_arn = aws_iam_role.pipeline_role.arn
 
@@ -230,6 +266,7 @@ resource "aws_codepipeline" "service_pipeline" {
 
   stage {
     name = "Source"
+
     action {
       name             = "Source"
       category         = "Source"
@@ -237,6 +274,7 @@ resource "aws_codepipeline" "service_pipeline" {
       provider         = "CodeStarSourceConnection"
       version          = "1"
       output_artifacts = ["source_output"]
+
       configuration = {
         ConnectionArn    = aws_codestarconnections_connection.github.arn
         FullRepositoryId = "chinnmayK/aws-fargate-event-driven-microservices"
@@ -247,14 +285,16 @@ resource "aws_codepipeline" "service_pipeline" {
 
   stage {
     name = "Build"
+
     action {
       name             = "Build"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
+      version          = "1"
       input_artifacts  = ["source_output"]
       output_artifacts = ["build_output"]
-      version          = "1"
+
       configuration = {
         ProjectName = aws_codebuild_project.build[each.key].name
       }
@@ -263,15 +303,26 @@ resource "aws_codepipeline" "service_pipeline" {
 
   stage {
     name = "Deploy"
+
     action {
       name            = "Deploy"
       category        = "Deploy"
       owner           = "AWS"
-      provider        = "ECS"
-      input_artifacts = ["build_output"]
       version         = "1"
-      configuration = {
-        ClusterName = "microservices-cluster"
+      input_artifacts = ["build_output"]
+
+      # IF customer, use CodeDeployToECS. ELSE use standard ECS.
+      provider = each.key == "customer" ? "CodeDeployToECS" : "ECS"
+
+      configuration = each.key == "customer" ? {
+        ApplicationName                = "customer-service-deploy"
+        DeploymentGroupName            = "customer-deployment-group"
+        TaskDefinitionTemplateArtifact = "build_output"
+        AppSpecTemplateArtifact        = "build_output"
+        TaskDefinitionTemplatePath     = "taskdef.json"
+        AppSpecTemplatePath            = "appspec.yaml"
+      } : {
+        ClusterName = var.cluster_name
         ServiceName = "${each.key}-service"
         FileName    = "imagedefinitions.json"
       }
