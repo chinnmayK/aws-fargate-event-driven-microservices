@@ -13,12 +13,16 @@ phases:
       - docker build -t $REPOSITORY_URI:latest ./customer
   post_build:
     commands:
-      - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:latest
-      - echo Writing image definitions file...
-      # CRITICAL: "name" must match the container name in your ECS Task Definition
-      - printf '[{"name":"customer","imageUri":"%s"}]' $REPOSITORY_URI:latest > imagedefinitions.json
+      - echo Build completed on `date`
+      - echo Building imagedefinitions.json...
+      - printf '[{"name":"customer","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - echo Updating placeholders in taskdef.json and appspec.yaml...
+      - sed -i "s|<IMAGE1_NAME>|$REPOSITORY_URI:$IMAGE_TAG|g" customer/taskdef.json
+      - cp customer/appspec.yaml .
+      - cp customer/taskdef.json .
 
 artifacts:
   files:
     - imagedefinitions.json
+    - appspec.yaml
+    - taskdef.json

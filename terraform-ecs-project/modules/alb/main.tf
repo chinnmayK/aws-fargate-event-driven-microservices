@@ -56,11 +56,30 @@ resource "aws_security_group" "alb_sg" {
 # running on AWS Fargate.
 resource "aws_lb_target_group" "tg" {
   for_each    = toset(["customer", "products", "shopping"])
-  name        = "${each.key}-tg"
+  name        = "${each.key}-tg" # This will be our "Blue" TG for customer
   port        = 80
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
-  target_type = "ip" # Required for ECS Fargate tasks
+  target_type = "ip"
+
+  # Health check configuration for service containers
+  health_check {
+    path                = "/health" # Common health endpoint across services
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
+resource "aws_lb_target_group" "customer_green" {
+  name        = "customer-tg-green"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
 
   # Health check configuration for service containers
   health_check {
@@ -154,4 +173,8 @@ output "target_group_arns" {
 
 output "alb_sg_id" {
   value = aws_security_group.alb_sg.id
+}
+
+output "listener_arn" {
+  value = aws_lb_listener.http.arn
 }

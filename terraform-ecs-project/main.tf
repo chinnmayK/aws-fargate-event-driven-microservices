@@ -104,6 +104,12 @@ module "ecs" {
 module "cicd" {
   source     = "./modules/cicd"
   account_id = data.aws_caller_identity.current.account_id
+
+  cluster_name             = module.ecs.cluster_name
+  service_name             = "customer-service"
+  alb_listener_arn         = module.alb.listener_arn
+  blue_target_group_name   = "customer-tg"
+  green_target_group_name  = "customer-tg-green"
 }
 
 # Output the ARN to your terminal

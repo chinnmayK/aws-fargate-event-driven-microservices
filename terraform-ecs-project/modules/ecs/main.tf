@@ -111,7 +111,7 @@ resource "aws_security_group" "ecs_tasks" {
 # - Database connection strings
 # - Messaging broker credentials
 resource "aws_secretsmanager_secret" "app_secrets" {
-  name        = "microservices-secrets-v3"
+  name        = "microservices-secrets-v4"
   description = "Sensitive credentials for microservices"
 }
 
@@ -220,26 +220,32 @@ resource "aws_ecs_service" "main" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
-  # Force redeployment on configuration changes
-  force_new_deployment = true
-  triggers = {
-    redeployment = plantimestamp() # Terraform 1.5+
+  # Disable forced redeployments for customer
+  force_new_deployment = each.key != "customer"
+
+  # Disable timestamp trigger for customer
+  triggers = each.key == "customer" ? {} : {
+    redeployment = plantimestamp()
+  }
+
+  deployment_controller {
+    type = each.key == "customer" ? "CODE_DEPLOY" : "ECS"
   }
 
   health_check_grace_period_seconds = 60
 
-  # Networking configuration for Fargate tasks
   network_configuration {
     security_groups  = [aws_security_group.ecs_tasks.id]
     subnets          = var.private_subnets
     assign_public_ip = true
   }
 
-  # Attach ECS service to ALB target group
   load_balancer {
     target_group_arn = var.target_group_arns[each.key]
     container_name   = each.key
-    container_port   = each.key == "customer" ? 8001 : (each.key == "products" ? 8002 : 8003)
+    container_port   = each.key == "customer" ? 8001 : (
+      each.key == "products" ? 8002 : 8003
+    )
   }
 }
 
@@ -249,4 +255,8 @@ resource "aws_ecs_service" "main" {
 # Expose ECS task security group for use by other modules
 output "ecs_tasks_sg_id" {
   value = aws_security_group.ecs_tasks.id
+}
+
+output "cluster_name" {
+  value = aws_ecs_cluster.main.name
 }
