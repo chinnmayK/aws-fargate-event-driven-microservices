@@ -1,19 +1,19 @@
 variable "vpc_id" {
   type        = string
-  description = "The ID of the VPC"
+  description = "The ID of the VPC where EC2 instances will reside"
 }
 
 variable "private_subnets" {
   type        = list(string)
-  description = "The list of private subnets for the ASG"
+  description = "List of private subnet IDs for the Auto Scaling Group"
 }
 
 variable "alb_sg_id" {
   type        = string
-  description = "The security group ID of the ALB"
+  description = "The Security Group ID of the Load Balancer to allow traffic"
 }
 
 variable "instance_profile_name" {
   type        = string
-  description = "The IAM instance profile for EC2"
+  description = "The IAM Instance Profile name with S3 and CodeDeploy permissions"
 }

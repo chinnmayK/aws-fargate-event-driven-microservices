@@ -24,6 +24,12 @@ resource "aws_iam_role_policy_attachment" "ec2_codedeploy_agent" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAWSCodeDeploy"
 }
 
+# CRITICAL: Added for SSM / "Connect" button functionality
+resource "aws_iam_role_policy_attachment" "ec2_ssm_core" {
+  role       = aws_iam_role.ec2_instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 # Required for EC2 instances to appear in the console
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ecom-ec2-instance-profile"
@@ -51,6 +57,8 @@ resource "aws_iam_role_policy_attachment" "codedeploy_service" {
   role       = aws_iam_role.codedeploy_service_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
 }
+
+# --- Outputs ---
 
 output "instance_profile_name" {
   value = aws_iam_instance_profile.ec2_profile.name

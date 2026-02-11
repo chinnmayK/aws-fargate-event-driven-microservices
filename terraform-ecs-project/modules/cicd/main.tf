@@ -200,27 +200,15 @@ resource "aws_codedeploy_deployment_group" "services" {
 
   autoscaling_groups = [var.asg_names[each.key]]
 
-deployment_style {
-    deployment_option = "WITH_TRAFFIC_CONTROL" # This links to the ALB
-    deployment_type   = "BLUE_GREEN"           # This creates new instances
+  # UPDATED: Switched to IN_PLACE for stability in private subnets
+  deployment_style {
+    deployment_option = "WITHOUT_TRAFFIC_CONTROL"
+    deployment_type   = "IN_PLACE"
   }
 
-  blue_green_deployment_config {
-    deployment_ready_option {
-      action_on_timeout = "CONTINUE_DEPLOYMENT"
-    }
-    terminate_blue_instances_on_deployment_success {
-      action                           = "TERMINATE"
-      termination_wait_time_in_minutes = 5
-    }
-  }
-
-load_balancer_info {
-    target_group_info {
-      # Use the variable we just created
-      name = var.target_group_names[each.key] 
-    }
-  }
+  # NOTE: blue_green_deployment_config and load_balancer_info 
+  # are removed for IN_PLACE WITHOUT_TRAFFIC_CONTROL to prevent 
+  # target group health-check lockouts during initial setup.
 }
 
 # -------------------------------

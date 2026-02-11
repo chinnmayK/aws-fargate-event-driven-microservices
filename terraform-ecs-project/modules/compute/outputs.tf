@@ -4,8 +4,10 @@ output "ec2_sg_id" {
 
 output "asg_names" {
   value = {
-    customer = aws_autoscaling_group.app["customer"].name
-    products = aws_autoscaling_group.app["products"].name
-    shopping = aws_autoscaling_group.app["shopping"].name
+    for k, v in aws_autoscaling_group.app : k => v.name
   }
+}
+
+output "launch_template_id" {
+  value = aws_launch_template.app.id
 }
