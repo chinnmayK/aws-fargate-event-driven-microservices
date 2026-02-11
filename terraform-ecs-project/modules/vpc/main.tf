@@ -9,8 +9,10 @@
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
-  enable_dns_support   = true 
-  tags                 = { Name = "microservices-vpc" }
+  enable_dns_support   = true
+  tags = {
+    Name = "microservices-vpc"
+  }
 }
 
 # ------------------------------------------------------------
@@ -26,37 +28,72 @@ data "aws_availability_zones" "available" {}
 # 3. Subnets
 # ------------------------------------------------------------
 
-# Public Subnets (For ALB)
+# Public Subnets (For ALB & NAT)
 resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.${count.index}.0/24"
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
-  tags                    = { Name = "public-subnet-${count.index}" }
+
+  tags = {
+    Name = "public-subnet-${count.index}"
+  }
 }
 
-# Private Subnets (For EC2 Instances)
+# Private Subnets (For EC2)
 resource "aws_subnet" "private" {
   count             = 2
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.${count.index + 10}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
-  tags              = { Name = "private-subnet-${count.index}" }
+
+  tags = {
+    Name = "private-subnet-${count.index}"
+  }
 }
 
 # ------------------------------------------------------------
-# 4. Routing Logic
+# 4. NAT Gateway
 # ------------------------------------------------------------
 
-# Public Routing
+# Elastic IP for NAT
+resource "aws_eip" "nat" {
+  domain = "vpc"
+
+  tags = {
+    Name = "microservices-nat-eip"
+  }
+}
+
+# NAT Gateway (must be in public subnet)
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+
+  tags = {
+    Name = "microservices-nat-gateway"
+  }
+
+  depends_on = [aws_internet_gateway.gw]
+}
+
+# ------------------------------------------------------------
+# 5. Routing Logic
+# ------------------------------------------------------------
+
+# Public Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
+
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.gw.id
   }
-  tags = { Name = "public-rt" }
+
+  tags = {
+    Name = "public-rt"
+  }
 }
 
 resource "aws_route_table_association" "public" {
@@ -65,10 +102,20 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private Routing (Critical for S3 Gateway Endpoint)
+# Private Route Table
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-  tags   = { Name = "private-rt" }
+
+  tags = {
+    Name = "private-rt"
+  }
+}
+
+# Route private traffic to NAT Gateway
+resource "aws_route" "private_nat_route" {
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.main.id
 }
 
 resource "aws_route_table_association" "private" {
@@ -78,10 +125,10 @@ resource "aws_route_table_association" "private" {
 }
 
 # ------------------------------------------------------------
-# 5. VPC Endpoints (The "No NAT" Connectivity Layer)
+# 6. VPC Endpoints
 # ------------------------------------------------------------
 
-# Unified Security Group for Interface Endpoints
+# Security Group for Interface Endpoints
 resource "aws_security_group" "vpc_endpoints" {
   name   = "vpc-endpoints-sg"
   vpc_id = aws_vpc.main.id
@@ -90,7 +137,14 @@ resource "aws_security_group" "vpc_endpoints" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = [aws_vpc.main.cidr_block] 
+    cidr_blocks = [aws_vpc.main.cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -102,7 +156,7 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids   = [aws_route_table.private.id]
 }
 
-# Interface Endpoints for ECR, Secrets, Logs, and SSM (Connect Button)
+# Interface Endpoints
 resource "aws_vpc_endpoint" "interface_endpoints" {
   for_each = toset([
     "ecr.api",
@@ -111,9 +165,7 @@ resource "aws_vpc_endpoint" "interface_endpoints" {
     "logs",
     "ssm",
     "ssmmessages",
-    "ec2messages",
-    "codedeploy",
-    "codedeploy-commands-secure"
+    "ec2messages"
   ])
 
   vpc_id              = aws_vpc.main.id
@@ -125,8 +177,9 @@ resource "aws_vpc_endpoint" "interface_endpoints" {
 }
 
 # ------------------------------------------------------------
-# 6. Outputs
+# 7. Outputs
 # ------------------------------------------------------------
+
 output "vpc_id" {
   value = aws_vpc.main.id
 }
