@@ -1,23 +1,16 @@
 version: 0.2
 
 phases:
-  pre_build:
-    commands:
-      - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+  install:
+    runtime-versions:
+      nodejs: 18
   build:
     commands:
-      - echo Build started on `date`
-      - echo Building the Docker image...
-      - docker build -t $REPOSITORY_URI:latest ./shopping
-  post_build:
-    commands:
-      - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:latest
-      - echo Writing image definitions file...
-      - printf '[{"name":"shopping","imageUri":"%s"}]' $REPOSITORY_URI:latest > imagedefinitions.json
-
+      - echo "Packaging service for EC2..."
+      # No 'npm install' here to keep the artifact small. 
+      # The EC2 instance will run 'npm install' locally.
 artifacts:
   files:
-    - imagedefinitions.json
-    
+    - '**/*'
+  # This makes the root of the ZIP file the contents of the service folder
+  base-directory: 'shopping'

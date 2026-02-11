@@ -106,7 +106,7 @@ resource "aws_iam_role" "pipeline_role" {
   })
 }
 
-# 7. Pipeline Policy
+# 7. Pipeline Policy (ECS removed, EC2 CodeDeploy retained)
 resource "aws_iam_role_policy" "pipeline_policy" {
   role = aws_iam_role.pipeline_role.name
   name = "ecom-pipeline-policy"
@@ -141,23 +141,6 @@ resource "aws_iam_role_policy" "pipeline_policy" {
       {
         Effect = "Allow"
         Action = [
-          "ecs:DescribeServices",
-          "ecs:DescribeTaskDefinition",
-          "ecs:RegisterTaskDefinition",
-          "ecs:UpdateService"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = ["iam:PassRole"]
-        Resource = "*"
-      },
-
-      # ✅ CodeDeploy permissions
-      {
-        Effect = "Allow"
-        Action = [
           "codedeploy:CreateDeployment",
           "codedeploy:GetDeployment",
           "codedeploy:GetDeploymentConfig",
@@ -167,12 +150,10 @@ resource "aws_iam_role_policy" "pipeline_policy" {
         ]
         Resource = "*"
       },
-
-      # ✅ REQUIRED: Allow CodePipeline to pass the CodeDeploy role
       {
         Effect = "Allow"
         Action = "iam:PassRole"
-        Resource = "arn:aws:iam::202533520289:role/ecom-codedeploy-role"
+        Resource = aws_iam_role.codedeploy_role.arn
       }
     ]
   })
@@ -192,62 +173,55 @@ resource "aws_iam_role" "codedeploy_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "codedeploy_ecs" {
+# Updated to EC2 policy
+resource "aws_iam_role_policy_attachment" "codedeploy_ec2" {
   role       = aws_iam_role.codedeploy_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
 }
 
-# CodeDeploy Application
-resource "aws_codedeploy_app" "customer" {
-  compute_platform = "ECS"
-  name             = "customer-service-deploy"
+# -------------------------------
+# CodeDeploy Applications (Dynamic)
+# -------------------------------
+resource "aws_codedeploy_app" "services" {
+  for_each         = toset(["customer", "products", "shopping"])
+  compute_platform = "Server"
+  name             = "${each.key}-service-deploy"
 }
 
-# CodeDeploy Deployment Group
-resource "aws_codedeploy_deployment_group" "customer" {
-  app_name               = aws_codedeploy_app.customer.name
-  deployment_group_name  = "customer-deployment-group"
-  deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
+# -------------------------------
+# CodeDeploy Deployment Groups (Dynamic)
+# -------------------------------
+resource "aws_codedeploy_deployment_group" "services" {
+  for_each               = toset(["customer", "products", "shopping"])
+  app_name               = aws_codedeploy_app.services[each.key].name
+  deployment_group_name  = "${each.key}-deployment-group"
+  deployment_config_name = "CodeDeployDefault.AllAtOnce"
   service_role_arn       = aws_iam_role.codedeploy_role.arn
 
-  deployment_style {
-    deployment_option = "WITH_TRAFFIC_CONTROL"
-    deployment_type   = "BLUE_GREEN"
+  autoscaling_groups = [var.asg_names[each.key]]
+
+deployment_style {
+    deployment_option = "WITH_TRAFFIC_CONTROL" # This links to the ALB
+    deployment_type   = "BLUE_GREEN"           # This creates new instances
   }
 
   blue_green_deployment_config {
     deployment_ready_option {
       action_on_timeout = "CONTINUE_DEPLOYMENT"
     }
-
     terminate_blue_instances_on_deployment_success {
       action                           = "TERMINATE"
       termination_wait_time_in_minutes = 5
     }
   }
 
-  load_balancer_info {
-    target_group_pair_info {
-      prod_traffic_route {
-        listener_arns = [var.alb_listener_arn]
-      }
-
-      target_group {
-        name = var.blue_target_group_name
-      }
-
-      target_group {
-        name = var.green_target_group_name
-      }
+load_balancer_info {
+    target_group_info {
+      # Use the variable we just created
+      name = var.target_group_names[each.key] 
     }
   }
-
-  ecs_service {
-    cluster_name = var.cluster_name
-    service_name = var.service_name
-  }
 }
-
 
 # -------------------------------
 # 8. The Pipelines (One for each service)
@@ -308,23 +282,13 @@ resource "aws_codepipeline" "service_pipeline" {
       name            = "Deploy"
       category        = "Deploy"
       owner           = "AWS"
+      provider        = "CodeDeploy"
       version         = "1"
       input_artifacts = ["build_output"]
 
-      # IF customer, use CodeDeployToECS. ELSE use standard ECS.
-      provider = each.key == "customer" ? "CodeDeployToECS" : "ECS"
-
-      configuration = each.key == "customer" ? {
-        ApplicationName                = "customer-service-deploy"
-        DeploymentGroupName            = "customer-deployment-group"
-        TaskDefinitionTemplateArtifact = "build_output"
-        AppSpecTemplateArtifact        = "build_output"
-        TaskDefinitionTemplatePath     = "taskdef.json"
-        AppSpecTemplatePath            = "appspec.yaml"
-      } : {
-        ClusterName = var.cluster_name
-        ServiceName = "${each.key}-service"
-        FileName    = "imagedefinitions.json"
+      configuration = {
+        ApplicationName     = aws_codedeploy_app.services[each.key].name
+        DeploymentGroupName = aws_codedeploy_deployment_group.services[each.key].deployment_group_name
       }
     }
   }

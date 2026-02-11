@@ -3,35 +3,22 @@
 # File: modules/alb/main.tf
 # ============================================================
 
-# ------------------------------------------------------------
 # 1. Application Load Balancer
-# ------------------------------------------------------------
-# Creates an internet-facing Application Load Balancer that
-# routes HTTP traffic to backend ECS services.
 resource "aws_lb" "main" {
   name               = "microservices-alb"
   internal           = false
   load_balancer_type = "application"
-
-  # Security group controlling inbound/outbound traffic
   security_groups    = [aws_security_group.alb_sg.id]
-
-  # Public subnets where the ALB will be deployed
   subnets            = var.public_subnets
 
   tags = { Name = "microservices-alb" }
 }
 
-# ------------------------------------------------------------
 # 2. Security Group for ALB
-# ------------------------------------------------------------
-# Allows inbound HTTP traffic from the internet and
-# unrestricted outbound traffic to backend services.
 resource "aws_security_group" "alb_sg" {
   name   = "alb-sg"
   vpc_id = var.vpc_id
 
-  # Allow HTTP traffic from anywhere
   ingress {
     from_port   = 80
     to_port     = 80
@@ -39,7 +26,6 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow all outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -51,20 +37,28 @@ resource "aws_security_group" "alb_sg" {
 # ------------------------------------------------------------
 # 3. Target Groups (One per Microservice)
 # ------------------------------------------------------------
-# Creates a separate target group for each service.
-# These target groups will be attached to ECS services
-# running on AWS Fargate.
+# Local variable to map service names to their specific ports
+locals {
+  service_ports = {
+    customer = 8001
+    products = 8002
+    shopping = 8003
+  }
+}
+
 resource "aws_lb_target_group" "tg" {
   for_each    = toset(["customer", "products", "shopping"])
-  name        = "${each.key}-tg" # This will be our "Blue" TG for customer
-  port        = 80
+  name_prefix = substr(each.key, 0, 6)
+  port        = local.service_ports[each.key] # Port matches Node.js app port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
-  target_type = "ip"
+  target_type = "instance" # CRITICAL CHANGE: Switched from "ip" to "instance"
+  lifecycle {
+    create_before_destroy = true
+  }
 
-  # Health check configuration for service containers
   health_check {
-    path                = "/${each.key}/health" # Common health endpoint across services
+    path                = "/${each.key}/health"
     port                = "traffic-port"
     protocol            = "HTTP"
     interval            = 30
@@ -75,15 +69,17 @@ resource "aws_lb_target_group" "tg" {
 }
 
 resource "aws_lb_target_group" "customer_green" {
-  name        = "customer-tg-green"
-  port        = 80
+  name_prefix = "cust-g"
+  port        = 8001 # Port matches Customer Service port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
-  target_type = "ip"
+  target_type = "instance" # CRITICAL CHANGE: Switched from "ip" to "instance"
+  lifecycle {
+    create_before_destroy = true
+  }
 
-  # Health check configuration for service containers
   health_check {
-    path                = "/customer/health" # Common health endpoint across services
+    path                = "/customer/health"
     port                = "traffic-port"
     protocol            = "HTTP"
     interval            = 30
@@ -93,20 +89,14 @@ resource "aws_lb_target_group" "customer_green" {
   }
 }
 
-# ------------------------------------------------------------
 # 4. ALB Listener (HTTP :80)
-# ------------------------------------------------------------
-# Listens for incoming HTTP requests and forwards them
-# to the appropriate target group based on routing rules.
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
 
-  # Default response when no routing rules match
   default_action {
     type = "fixed-response"
-
     fixed_response {
       content_type = "text/plain"
       message_body = "404: Not Found"
@@ -115,11 +105,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# ------------------------------------------------------------
 # 5. Listener Rules (Path-Based Routing)
-# ------------------------------------------------------------
-# Routes traffic to target groups based on URL path.
-# Lifecycle ignore_changes is REQUIRED for Blue-Green deployments.
 resource "aws_lb_listener_rule" "rules" {
   for_each     = aws_lb_target_group.tg
   listener_arn = aws_lb_listener.http.arn
@@ -131,31 +117,28 @@ resource "aws_lb_listener_rule" "rules" {
 
   condition {
     path_pattern {
-      # This pattern covers both /service and /service/any-path
       values = ["/${each.key}", "/${each.key}/*"]
     }
   }
 
-  # CRITICAL for Blue-Green:
-  # This prevents Terraform from reverting the target_group_arn 
-  # back to "Blue" while CodeDeploy has it set to "Green".
   lifecycle {
-    ignore_changes = [
-      action
-    ]
+    ignore_changes = [action]
   }
 }
 
 # ------------------------------------------------------------
 # Outputs
 # ------------------------------------------------------------
-# Expose ALB details for use by ECS and root module
 output "alb_dns_name" {
   value = aws_lb.main.dns_name
 }
 
 output "target_group_arns" {
   value = { for k, v in aws_lb_target_group.tg : k => v.arn }
+}
+
+output "target_group_names" {
+  value = { for k, v in aws_lb_target_group.tg : k => v.name }
 }
 
 output "alb_sg_id" {

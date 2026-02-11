@@ -19,15 +19,15 @@
             "secrets": [
                 {
                     "name": "MONGODB_URI",
-                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v4:customer_mongodb_uri::"
+                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v5:customer_mongodb_uri::"
                 },
                 {
                     "name": "MSG_QUEUE_URL",
-                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v4:rabbitmq_uri::"
+                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v5:rabbitmq_uri::"
                 },
                 {
                     "name": "APP_SECRET",
-                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v4:app_secret::"
+                    "valueFrom": "arn:aws:secretsmanager:ap-south-1:202533520289:secret:microservices-secrets-v5:app_secret::"
                 }
             ],
             "logConfiguration": {
