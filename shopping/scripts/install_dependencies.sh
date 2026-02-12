@@ -5,7 +5,7 @@ cd /home/ubuntu/shopping
 # Update apt and install Node.js if missing
 if ! command -v node &> /dev/null; then
     curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    sudo apt-get install -y nodejs build-essential
 fi
 
 # Install PM2 globally

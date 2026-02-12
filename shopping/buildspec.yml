@@ -3,16 +3,15 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 18
+      nodejs: 18  # This uses the correct, pre-installed version
   build:
     commands:
-      - echo "Fixing line endings and permissions..."
-      # This fixes the Windows-to-Linux crash issue
-      - sed -i 's/\r$//' scripts/*.sh
-      - chmod +x scripts/*.sh
+      - echo "Fixing line endings and permissions for $SERVICE_NAME..."
+      # Use the folder prefix so sed can find the files
+      - sed -i 's/\r$//' shopping/scripts/*.sh
+      - chmod +x shopping/scripts/*.sh
 artifacts:
   files:
     - '**/*'
-  # This is the magic line. It tells CodeBuild: 
-  # "Go inside the shopping folder and make THAT the root of the zip file"
-  base-directory: '.'
+  # This flattens the zip so appspec.yml is at the root
+  base-directory: 'shopping'
