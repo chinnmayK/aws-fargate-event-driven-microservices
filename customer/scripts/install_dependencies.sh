@@ -1,20 +1,11 @@
 #!/bin/bash
-set -e
-# 1. Move to app directory
 cd /home/ubuntu/customer
 
-# 2. FIX PERMISSIONS: Ensure the 'ubuntu' user owns the folder
-# This solves the EACCES permission denied error
-sudo chown -R ubuntu:ubuntu /home/ubuntu/customer
-
-# 3. Update apt and install Node.js if missing
-if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    sudo apt-get install -y nodejs build-essential
-fi
-
-# 4. Install PM2 globally
-sudo npm install pm2 -g
-
-# 5. Install local app dependencies as the 'ubuntu' user
+# Install node modules if they aren't fully copied or need rebuilding
 npm install
+
+# Ensure PM2 is installed globally
+if ! command -v pm2 &> /dev/null
+then
+    sudo npm install -g pm2
+fi

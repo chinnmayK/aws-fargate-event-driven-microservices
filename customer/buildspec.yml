@@ -2,30 +2,29 @@ version: 0.2
 
 env:
   secrets-manager:
-    # Format: LOCAL_VAR: "SECRET_NAME:JSON_KEY"
-    MONGODB_URI: "microservices-secrets-v6:CUSTOMER_DB_URI"  # Changed from MONGODB_URI
-    MSG_QUEUE_URL: "microservices-secrets-v6:rabbitmq_uri"   # Changed from MSG_QUEUE_URL
+    # LOCAL_VAR: "SECRET_NAME:JSON_KEY_IN_AWS"
+    MONGODB_URI: "microservices-secrets-v6:CUSTOMER_DB_URI"
+    MSG_QUEUE_URL: "microservices-secrets-v6:MSG_QUEUE_URL"
     EXCHANGE_NAME: "microservices-secrets-v6:EXCHANGE_NAME"
-    APP_SECRET: "microservices-secrets-v6:app_secret"       # Changed from APP_SECRET
+    APP_SECRET: "microservices-secrets-v6:APP_SECRET"
     NODE_ENV: "microservices-secrets-v6:NODE_ENV"
 
 phases:
   install:
     commands:
-      # ✅ Change directory to where the package.json is located
+      - echo "Installing dependencies in customer directory..."
       - cd customer
       - npm install
   pre_build:
     commands:
-      - echo Generating .env file...
-      # We are already in the /customer directory from the install phase
+      - echo "Generating .env file..."
+      # Generate .env inside the customer folder
       - printf "PORT=8001\nNODE_ENV=$NODE_ENV\nMONGODB_URI=$MONGODB_URI\nMSG_QUEUE_URL=$MSG_QUEUE_URL\nEXCHANGE_NAME=$EXCHANGE_NAME\nAPP_SECRET=$APP_SECRET" > .env
   build:
     commands:
-      - echo Build started on `date`
-      # No need to cd again, CodeBuild maintains state within a phase
+      - echo "Build complete for Customer Service"
 artifacts:
-  # This ensures the files inside the customer folder are packaged
+  # Crucial: This flattens the folder so the EC2 doesn't get a nested /customer/customer/ path
   base-directory: customer
   files:
     - '**/*'
