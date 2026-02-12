@@ -3,6 +3,12 @@ os: linux
 files:
   - source: /
     destination: /home/ubuntu/customer
+permissions:
+  - object: /home/ubuntu/customer
+    pattern: "**"
+    owner: ubuntu
+    group: ubuntu
+    mode: 755
 hooks:
   AfterInstall:
     - location: scripts/install_dependencies.sh
