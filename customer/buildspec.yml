@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   secrets-manager:
-    # Key: "SecretName:JsonKey"
+    PORT: "microservices-secrets-v6:PORT"
     MONGODB_URI: "microservices-secrets-v6:CUSTOMER_DB_URI"
     MSG_QUEUE_URL: "microservices-secrets-v6:MSG_QUEUE_URL"
     EXCHANGE_NAME: "microservices-secrets-v6:EXCHANGE_NAME"
@@ -10,13 +10,22 @@ env:
     NODE_ENV: "microservices-secrets-v6:NODE_ENV"
 
 phases:
+  install:
+    commands:
+      # ✅ Change directory to where the package.json is located
+      - cd customer
+      - npm install
   pre_build:
     commands:
       - echo Generating .env file...
+      # We are already in the /customer directory from the install phase
       - printf "PORT=8001\nNODE_ENV=$NODE_ENV\nMONGODB_URI=$MONGODB_URI\nMSG_QUEUE_URL=$MSG_QUEUE_URL\nEXCHANGE_NAME=$EXCHANGE_NAME\nAPP_SECRET=$APP_SECRET" > .env
   build:
     commands:
-      - npm install
+      - echo Build started on `date`
+      # No need to cd again, CodeBuild maintains state within a phase
 artifacts:
+  # This ensures the files inside the customer folder are packaged
+  base-directory: customer
   files:
     - '**/*'
