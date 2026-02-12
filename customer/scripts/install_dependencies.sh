@@ -1,19 +1,21 @@
 #!/bin/bash
+# Force the path to include standard bin locations
+export PATH=$PATH:/usr/bin:/usr/local/bin
 
-# 1. Ensure we are in the correct directory
 cd /home/ubuntu/customer
 
-# 2. Fix permissions (Just in case the zip lost them)
-# This makes sure the ubuntu user owns everything in the folder
-sudo chown -R ubuntu:ubuntu /home/ubuntu/customer
+# 1. Download the RDS/DocDB SSL bundle (Crucial for Mongoose Connection)
+echo "Downloading DocumentDB SSL Bundle..."
+wget -O global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
 
-# 3. Install dependencies
-# Using --yes to prevent any interactive prompts that hang the script
-npm install --yes
-
-# 4. Check for PM2 and install if missing
+# 2. Ensure PM2 is installed and globally linked
 if ! command -v pm2 &> /dev/null
 then
-    echo "PM2 not found, installing..."
+    echo "PM2 not found. Installing..."
     sudo npm install -g pm2
+    # Link the specific binary path we found during debugging
+    sudo ln -sf /usr/lib/node_modules/pm2/bin/pm2 /usr/bin/pm2
 fi
+
+# 3. Clean install of node_modules
+npm install --yes

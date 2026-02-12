@@ -2,7 +2,6 @@ version: 0.2
 
 env:
   secrets-manager:
-    # LOCAL_VAR: "SECRET_NAME:JSON_KEY_IN_AWS"
     MONGODB_URI: "microservices-secrets-v6:CUSTOMER_DB_URI"
     MSG_QUEUE_URL: "microservices-secrets-v6:MSG_QUEUE_URL"
     EXCHANGE_NAME: "microservices-secrets-v6:EXCHANGE_NAME"
@@ -12,19 +11,19 @@ env:
 phases:
   install:
     commands:
-      - echo "Installing dependencies in customer directory..."
+      - echo "Installing dependencies..."
       - cd customer
       - npm install
   pre_build:
     commands:
-      - echo "Generating .env file..."
-      # Generate .env inside the customer folder
-      - printf "PORT=8001\nNODE_ENV=$NODE_ENV\nMONGODB_URI=$MONGODB_URI\nMSG_QUEUE_URL=$MSG_QUEUE_URL\nEXCHANGE_NAME=$EXCHANGE_NAME\nAPP_SECRET=$APP_SECRET" > .env
+      - echo "Generating .env file with SSL certificate path..."
+      # We append the tlsCAFile parameter so Mongoose knows where to find the bundle we download in install_dependencies.sh
+      - |
+        printf "PORT=8001\nNODE_ENV=$NODE_ENV\nMONGODB_URI=${MONGODB_URI}&tlsCAFile=/home/ubuntu/customer/global-bundle.pem\nMSG_QUEUE_URL=$MSG_QUEUE_URL\nEXCHANGE_NAME=$EXCHANGE_NAME\nAPP_SECRET=$APP_SECRET" > .env
   build:
     commands:
       - echo "Build complete for Customer Service"
 artifacts:
-  # Crucial: This flattens the folder so the EC2 doesn't get a nested /customer/customer/ path
   base-directory: customer
   files:
     - '**/*'
