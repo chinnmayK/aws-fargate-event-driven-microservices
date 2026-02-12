@@ -1,12 +1,15 @@
 #!/bin/bash
-# Move to the app directory
-cd /home/ec2-user/products
-# Check if Node is installed, if not, install it
+set -e
+cd /home/ubuntu/products
+
+# Update apt and install Node.js if missing
 if ! command -v node &> /dev/null; then
-    curl -sL https://rpm.nodesource.com/setup_18.x | sudo bash -
-    sudo yum install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    sudo apt-get install -y nodejs
 fi
-# Install PM2 globally to keep the app running in the background
+
+# Install PM2 globally
 sudo npm install pm2 -g
-# Install local dependencies
+
+# Install local app dependencies
 npm install

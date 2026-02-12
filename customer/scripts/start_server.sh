@@ -1,5 +1,7 @@
 #!/bin/bash
-cd /home/ec2-user/customer
-# Use PM2 to stop any existing instance and start the new one
-pm2 stop customer-service || true
+cd /home/ubuntu/customer
+# Start/Restart app with PM2
+pm2 delete "customer-service" || true
 pm2 start index.js --name "customer-service"
+# Optional: Ensure PM2 starts on boot
+pm2 save

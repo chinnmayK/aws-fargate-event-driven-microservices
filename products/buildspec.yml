@@ -6,11 +6,13 @@ phases:
       nodejs: 18
   build:
     commands:
-      - echo "Packaging service for EC2..."
-      # No 'npm install' here to keep the artifact small. 
-      # The EC2 instance will run 'npm install' locally.
+      - echo "Fixing line endings and permissions..."
+      # This fixes the Windows-to-Linux crash issue
+      - sed -i 's/\r$//' scripts/*.sh
+      - chmod +x scripts/*.sh
 artifacts:
   files:
     - '**/*'
-  # This makes the root of the ZIP file the contents of the service folder
-  base-directory: 'products'
+  # This is the magic line. It tells CodeBuild: 
+  # "Go inside the products folder and make THAT the root of the zip file"
+  base-directory: '.'

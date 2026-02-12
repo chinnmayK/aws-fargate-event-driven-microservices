@@ -1,5 +1,7 @@
 #!/bin/bash
-cd /home/ec2-user/products
-# Use PM2 to stop any existing instance and start the new one
-pm2 stop products-service || true
+cd /home/ubuntu/products
+# Start/Restart app with PM2
+pm2 delete "products-service" || true
 pm2 start index.js --name "products-service"
+# Optional: Ensure PM2 starts on boot
+pm2 save
