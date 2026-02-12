@@ -1,7 +1,12 @@
 #!/bin/bash
+# Move to the app directory
 cd /home/ubuntu/customer
-# Start/Restart app with PM2
+
+# Delete any existing process to avoid name conflicts
 pm2 delete "customer-service" || true
-pm2 start index.js --name "customer-service"
-# Optional: Ensure PM2 starts on boot
+
+# Start the app using the correct path to index.js
+pm2 start src/index.js --name "customer-service"
+
+# Save the process list so it persists on reboots
 pm2 save

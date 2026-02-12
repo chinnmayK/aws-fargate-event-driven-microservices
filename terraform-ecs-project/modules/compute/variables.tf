@@ -17,3 +17,8 @@ variable "instance_profile_name" {
   type        = string
   description = "The IAM Instance Profile name with S3 and CodeDeploy permissions"
 }
+
+variable "target_group_arns" {
+  description = "Map of target group ARNs for the microservices"
+  type        = map(string)
+}

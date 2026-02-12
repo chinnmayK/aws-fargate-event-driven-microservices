@@ -32,7 +32,7 @@ module "alb" {
 }
 
 # ------------------------------------------------------------
-# 4. Compute Layer (EC2 Auto Scaling)
+# 4. Compute Layer (EC2 Auto Scaling with ALB Integration)
 # ------------------------------------------------------------
 module "compute" {
   source                = "./modules/compute"
@@ -40,6 +40,9 @@ module "compute" {
   private_subnets       = module.vpc.private_subnets
   alb_sg_id             = module.alb.alb_sg_id
   instance_profile_name = module.iam.instance_profile_name
+
+  # ✅ Simply pass the map output directly
+  target_group_arns     = module.alb.target_group_arns
 }
 
 # ------------------------------------------------------------

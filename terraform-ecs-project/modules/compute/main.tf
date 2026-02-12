@@ -90,7 +90,7 @@ resource "aws_launch_template" "app" {
 }
 
 ############################################
-# 3. Auto Scaling Groups
+# 3. Auto Scaling Groups (Updated)
 ############################################
 
 resource "aws_autoscaling_group" "app" {
@@ -103,8 +103,12 @@ resource "aws_autoscaling_group" "app" {
 
   launch_template {
     id      = aws_launch_template.app.id
-    version = "$Default"   # ✅ Changed from $Latest
+    version = "$Latest" # $Latest works better when update_default_version is true
   }
+
+  # ✅ THIS IS THE CRITICAL MISSING LINK
+  # Connects the ASG to the correct Target Group so instances register automatically
+  target_group_arns = [var.target_group_arns[each.key]]
 
   tag {
     key                 = "Name"
