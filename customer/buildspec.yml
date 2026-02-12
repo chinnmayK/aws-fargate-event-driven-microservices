@@ -1,17 +1,22 @@
 version: 0.2
 
+env:
+  secrets-manager:
+    # Key: "SecretName:JsonKey"
+    MONGODB_URI: "microservices-secrets-v6:CUSTOMER_DB_URI"
+    MSG_QUEUE_URL: "microservices-secrets-v6:MSG_QUEUE_URL"
+    EXCHANGE_NAME: "microservices-secrets-v6:EXCHANGE_NAME"
+    APP_SECRET: "microservices-secrets-v6:APP_SECRET"
+    NODE_ENV: "microservices-secrets-v6:NODE_ENV"
+
 phases:
-  install:
-    runtime-versions:
-      nodejs: 18  # This uses the correct, pre-installed version
+  pre_build:
+    commands:
+      - echo Generating .env file...
+      - printf "PORT=8001\nNODE_ENV=$NODE_ENV\nMONGODB_URI=$MONGODB_URI\nMSG_QUEUE_URL=$MSG_QUEUE_URL\nEXCHANGE_NAME=$EXCHANGE_NAME\nAPP_SECRET=$APP_SECRET" > .env
   build:
     commands:
-      - echo "Fixing line endings and permissions for $SERVICE_NAME..."
-      # Use the folder prefix so sed can find the files
-      - sed -i 's/\r$//' customer/scripts/*.sh
-      - chmod +x customer/scripts/*.sh
+      - npm install
 artifacts:
   files:
     - '**/*'
-  # This flattens the zip so appspec.yml is at the root
-  base-directory: 'customer'

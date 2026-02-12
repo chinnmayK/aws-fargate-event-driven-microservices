@@ -11,7 +11,9 @@ data "aws_caller_identity" "current" {}
 # 1. Identity Layer
 # ------------------------------------------------------------
 module "iam" {
-  source = "./modules/iam"
+  source          = "./modules/iam"
+  # ✅ FIXED: Passing the secret ARN to the IAM module
+  app_secrets_arn = aws_secretsmanager_secret.app_secrets.arn
 }
 
 # ------------------------------------------------------------
@@ -40,8 +42,6 @@ module "compute" {
   private_subnets       = module.vpc.private_subnets
   alb_sg_id             = module.alb.alb_sg_id
   instance_profile_name = module.iam.instance_profile_name
-
-  # ✅ Simply pass the map output directly
   target_group_arns     = module.alb.target_group_arns
 }
 
@@ -52,8 +52,6 @@ module "database" {
   source          = "./modules/database"
   vpc_id          = module.vpc.vpc_id
   private_subnets = module.vpc.private_subnets
-
-  # FIXED: Now uses the EC2 security group from the compute module
   ecs_sg_id       = module.compute.ec2_sg_id 
 }
 
@@ -64,8 +62,6 @@ module "messaging" {
   source          = "./modules/messaging"
   vpc_id          = module.vpc.vpc_id
   private_subnets = module.vpc.private_subnets
-
-  # FIXED: Now uses the EC2 security group from the compute module
   ecs_sg_id       = module.compute.ec2_sg_id
 }
 
@@ -81,8 +77,30 @@ module "cicd" {
 }
 
 # ------------------------------------------------------------
-# Outputs
+# 8. Secrets Management (Professional Fix)
 # ------------------------------------------------------------
-output "github_connection_arn" {
-  value = module.cicd.connection_arn
+
+# 1. Create the Secret Container in root
+resource "aws_secretsmanager_secret" "app_secrets" {
+  name        = "microservices-secrets-v6"
+  description = "Production secrets for all microservices"
+}
+
+# 2. Store JSON values (Dynamic endpoints from modules)
+resource "aws_secretsmanager_secret_version" "app_secrets_val" {
+  secret_id     = aws_secretsmanager_secret.app_secrets.id
+  secret_string = jsonencode({
+    # Common variables
+    NODE_ENV      = "prod"
+    EXCHANGE_NAME = "ONLINE_SHOPPING"
+    APP_SECRET    = "your_secure_jwt_secret"
+
+    # Service-specific Database URIs
+    CUSTOMER_DB_URI = "mongodb://adminuser:SecurePassword123!@${module.database.db_endpoint}:27017/customer?tls=true&replicaSet=rs0&retryWrites=false"
+    PRODUCTS_DB_URI = "mongodb://adminuser:SecurePassword123!@${module.database.db_endpoint}:27017/products?tls=true&replicaSet=rs0&retryWrites=false"
+    SHOPPING_DB_URI = "mongodb://adminuser:SecurePassword123!@${module.database.db_endpoint}:27017/shopping?tls=true&replicaSet=rs0&retryWrites=false"
+
+    # Shared Messaging URL
+    MSG_QUEUE_URL   = "amqps://adminuser:SecurePassword123!@${module.messaging.broker_endpoint}:5671"
+  })
 }

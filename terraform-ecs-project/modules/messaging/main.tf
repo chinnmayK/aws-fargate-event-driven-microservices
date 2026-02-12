@@ -69,10 +69,3 @@ resource "aws_security_group" "mq_sg" {
   }
 }
 
-# ------------------------------------------------------------
-# Outputs
-# ------------------------------------------------------------
-# Expose RabbitMQ endpoint for ECS services
-output "endpoint" {
-  value = aws_mq_broker.rabbitmq.instances[0].endpoints[0]
-}

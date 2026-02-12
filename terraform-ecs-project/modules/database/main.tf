@@ -81,10 +81,3 @@ resource "aws_security_group" "docdb_sg" {
   }
 }
 
-# ------------------------------------------------------------
-# Outputs
-# ------------------------------------------------------------
-# Expose the DocumentDB endpoint for ECS services to connect to
-output "endpoint" {
-  value = aws_docdb_cluster.docdb.endpoint
-}

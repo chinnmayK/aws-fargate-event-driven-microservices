@@ -13,7 +13,6 @@ resource "aws_iam_role" "ec2_instance_role" {
   })
 }
 
-# Attach policy so EC2 can pull from S3 and talk to CodeDeploy
 resource "aws_iam_role_policy_attachment" "ec2_s3_readonly" {
   role       = aws_iam_role.ec2_instance_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
@@ -24,13 +23,11 @@ resource "aws_iam_role_policy_attachment" "ec2_codedeploy_agent" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAWSCodeDeploy"
 }
 
-# CRITICAL: Added for SSM / "Connect" button functionality
 resource "aws_iam_role_policy_attachment" "ec2_ssm_core" {
   role       = aws_iam_role.ec2_instance_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-# Required for EC2 instances to appear in the console
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ecom-ec2-instance-profile"
   role = aws_iam_role.ec2_instance_role.name
@@ -52,11 +49,44 @@ resource "aws_iam_role" "codedeploy_service_role" {
   })
 }
 
-# AWS Managed policy specifically for EC2-based CodeDeploy
 resource "aws_iam_role_policy_attachment" "codedeploy_service" {
   role       = aws_iam_role.codedeploy_service_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
 }
+
+
+# --- 3. CodeBuild Service Role (Added) ---
+
+resource "aws_iam_role" "codebuild_role" {
+  name = "ecom-codebuild-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "codebuild.amazonaws.com" }
+    }]
+  })
+}
+
+# Policy allowing CodeBuild to access the secret
+resource "aws_iam_role_policy" "codebuild_secrets_access" {
+  name = "CodeBuildSecretsPolicy"
+  role = aws_iam_role.codebuild_role.id 
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "secretsmanager:GetSecretValue"
+        Resource = var.app_secrets_arn # Correctly using the variable
+      }
+    ]
+  })
+}
+
 
 # --- Outputs ---
 
@@ -66,4 +96,8 @@ output "instance_profile_name" {
 
 output "codedeploy_role_arn" {
   value = aws_iam_role.codedeploy_service_role.arn
+}
+
+output "codebuild_role_id" {
+  value = aws_iam_role.codebuild_role.id
 }
