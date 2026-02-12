@@ -2,11 +2,11 @@ version: 0.2
 
 env:
   secrets-manager:
-    PORT: "microservices-secrets-v6:PORT"
-    MONGODB_URI: "microservices-secrets-v6:CUSTOMER_DB_URI"
-    MSG_QUEUE_URL: "microservices-secrets-v6:MSG_QUEUE_URL"
+    # Format: LOCAL_VAR: "SECRET_NAME:JSON_KEY"
+    MONGODB_URI: "microservices-secrets-v6:CUSTOMER_DB_URI"  # Changed from MONGODB_URI
+    MSG_QUEUE_URL: "microservices-secrets-v6:rabbitmq_uri"   # Changed from MSG_QUEUE_URL
     EXCHANGE_NAME: "microservices-secrets-v6:EXCHANGE_NAME"
-    APP_SECRET: "microservices-secrets-v6:APP_SECRET"
+    APP_SECRET: "microservices-secrets-v6:app_secret"       # Changed from APP_SECRET
     NODE_ENV: "microservices-secrets-v6:NODE_ENV"
 
 phases:
